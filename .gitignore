@@ -1,0 +1,32 @@
+# Environment
+.env
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Node
+node_modules/
+.next/
+out/
+build/
+
+# Generated outputs
+backend/outputs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+..server.log
+backend.log
+
+# Temp files
+backend/C:*
+backend/patch_*.py
