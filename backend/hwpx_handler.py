@@ -129,15 +129,13 @@ def generate_minutes(data: dict) -> Path:
             val = s(att_list[att_idx].get(field)) if att_idx < len(att_list) else ''
             section_xml = _replace_cell_text(section_xml, col, row, val)
 
-        # 3. 회의내용 — runtime slot extraction between '회의내용' and '회의비'
-        _start = section_xml.find('회의내용')
-        _end_marker = section_xml.find('회의비', _start)
-        content_slots = [t for t in re.findall(r'<hp:t>([^<]+)</hp:t>', section_xml[_start:_end_marker])
-                         if t.strip() and t.strip() not in ('회의내용', '회의사진')]
+        # 3. 회의내용 — subList 전체 교체 (템플릿 굵은 텍스트 잔존 방지)
         content_lines = [ln for ln in (data.get("회의내용") or "").split(chr(10)) if ln.strip()]
-        for i, slot in enumerate(content_slots):
-            replacement = _esc_xml(content_lines[i] if i < len(content_lines) else '')
-            section_xml = section_xml.replace(slot, replacement, 1)
+        if content_lines:
+            section_xml = _replace_cell_sublist_by_label(
+                section_xml, '회의내용', content_lines,
+                para_pr="21", char_pr="8", horzsize=41520
+            )
 
         # 4. 회의비 — conditional 식비/다과비 paragraph + 합계
         try:
@@ -262,16 +260,14 @@ def generate_attendee_list(data: dict) -> Path:
         header_xml = _re.sub(r'japanese="(\d+)"', 'japanese="1"', header_xml)
         header_xml = _re.sub(r' user="(\d+)"', ' user="1"', header_xml)
 
-        # 1. Replace title in Table 0 (row=0, col=1)
-        old_title = ('2025학년도 Beyond Minerva 초격차교육'
-                     '<hp:lineBreak/>'
-                     'AI Assisted Music Production 101 참석자 명단')
+        # 1. 제목 (Table 0)
+        old_title = '「Beyond Minerva AI Assisted Music Production 101」 서명부'
         new_title = f'「{s(data.get("회의명"))}」 서명부'
         section_xml = section_xml.replace(old_title, _esc_xml(new_title))
 
-        # 2. Replace 일시 and 장소 values in Table 1
+        # 2. 일시 / 장소 (Table 1)
         section_xml = section_xml.replace(
-            '2026.02.06.(금) 13:00~16:00',
+            '2026. 2. 6.(목) 13:00 ~ 16:00',
             _esc_xml(s(data.get("일시")))
         )
         section_xml = section_xml.replace(
@@ -279,27 +275,26 @@ def generate_attendee_list(data: dict) -> Path:
             _esc_xml(s(data.get("장소")))
         )
 
-        # 3. Find Table 2 start position (3rd <hp:tbl>) — after preliminary replacements
+        # 3. Table 2 시작 위치
         tbl_positions = [m.start() for m in re.finditer(r'<hp:tbl ', section_xml)]
         table2_start = tbl_positions[2] if len(tbl_positions) >= 3 else 0
 
-        # 4. Replace attendee data rows 1–25 in Table 2
-        # Process from row 25 down to row 1 so earlier positions stay valid.
-        # Within each row process cols right-to-left for the same reason.
+        # 4. 참석자 rows 1-25 (col: 0=No, 1=소속, 2=직위, 3=학번, 4=이름)
         for row_idx in range(25, 0, -1):
             att_idx = row_idx - 1
             if att_idx < len(attendees):
                 att = attendees[att_idx]
                 vals = {
+                    0: str(row_idx),
                     1: s(att.get('소속')),
                     2: s(att.get('직위')),
                     3: s(att.get('학번') or '-'),
                     4: s(att.get('이름')),
                 }
             else:
-                vals = {1: '', 2: '', 3: '', 4: ''}
+                vals = {0: '', 1: '', 2: '', 3: '', 4: ''}
 
-            for col in (4, 3, 2, 1):
+            for col in (4, 3, 2, 1, 0):
                 section_xml = _replace_cell_text(
                     section_xml, col, row_idx, vals[col], table2_start
                 )
