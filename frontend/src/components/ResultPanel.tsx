@@ -210,7 +210,7 @@ export default function ResultPanel({
             <div className="flex items-center gap-2 text-xs text-cb-muted">
               <span className="text-cb-blue">✦</span>
               <span>
-                생성될 파일: 참석자명단, {docType === '결과보고서' ? '행사결과보고서' : '회의록'}
+                생성될 파일: 서명부, {docType === '결과보고서' ? '행사결과보고서' : '회의록'}
                 {receiptTypes.includes('식비') && parsedData?.식비 ? ', 식비 영수증' : ''}
                 {receiptTypes.includes('다과비') && parsedData?.다과비 ? ', 다과비 영수증' : ''}
                 <span className="ml-1 font-semibold text-cb-ink">({previewCount}개)</span>

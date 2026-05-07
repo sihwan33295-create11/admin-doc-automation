@@ -133,7 +133,7 @@ def generate_minutes(data: dict) -> Path:
         _start = section_xml.find('회의내용')
         _end_marker = section_xml.find('회의비', _start)
         content_slots = [t for t in re.findall(r'<hp:t>([^<]+)</hp:t>', section_xml[_start:_end_marker])
-                         if t.strip() and t.strip() != '회의내용']
+                         if t.strip() and t.strip() not in ('회의내용', '회의사진')]
         content_lines = [ln for ln in (data.get("회의내용") or "").split(chr(10)) if ln.strip()]
         for i, slot in enumerate(content_slots):
             replacement = _esc_xml(content_lines[i] if i < len(content_lines) else '')
@@ -244,7 +244,7 @@ def generate_attendee_list(data: dict) -> Path:
     Replaces only: title, 일시 value, 장소 value, and attendee row cells (rows 1-25).
     Rows beyond the attendee count are cleared to empty.
     """
-    dst = OUTPUTS / f"참석자명단_{_ts()}.hwpx"
+    dst = OUTPUTS / f"서명부_{_ts()}.hwpx"
     shutil.copy(ATTENDEE_HWPX, dst)
 
     def s(v): return str(v) if v is not None else ""
@@ -253,12 +253,20 @@ def generate_attendee_list(data: dict) -> Path:
 
     with zipfile.ZipFile(str(dst), 'r') as zin:
         section_xml = zin.read('Contents/section0.xml').decode('utf-8')
+        header_xml = zin.read('Contents/header.xml').decode('utf-8')
+
+        # 맑은 고딕(id=1) 으로 모든 한글 폰트 고정
+        import re as _re
+        header_xml = _re.sub(r'hangul="(\d+)"', 'hangul="1"', header_xml)
+        header_xml = _re.sub(r'hanja="(\d+)"', 'hanja="1"', header_xml)
+        header_xml = _re.sub(r'japanese="(\d+)"', 'japanese="1"', header_xml)
+        header_xml = _re.sub(r' user="(\d+)"', ' user="1"', header_xml)
 
         # 1. Replace title in Table 0 (row=0, col=1)
         old_title = ('2025학년도 Beyond Minerva 초격차교육'
                      '<hp:lineBreak/>'
                      'AI Assisted Music Production 101 참석자 명단')
-        new_title = f'「{s(data.get("회의명"))}」 참석자 명단'
+        new_title = f'「{s(data.get("회의명"))}」 서명부'
         section_xml = section_xml.replace(old_title, _esc_xml(new_title))
 
         # 2. Replace 일시 and 장소 values in Table 1
@@ -301,6 +309,8 @@ def generate_attendee_list(data: dict) -> Path:
             for item in zin.infolist():
                 if item.filename == 'Contents/section0.xml':
                     zout.writestr(item, section_xml.encode('utf-8'))
+                elif item.filename == 'Contents/header.xml':
+                    zout.writestr(item, header_xml.encode('utf-8'))
                 else:
                     zout.writestr(item, zin.read(item.filename))
 
