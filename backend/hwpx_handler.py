@@ -251,14 +251,6 @@ def generate_attendee_list(data: dict) -> Path:
 
     with zipfile.ZipFile(str(dst), 'r') as zin:
         section_xml = zin.read('Contents/section0.xml').decode('utf-8')
-        header_xml = zin.read('Contents/header.xml').decode('utf-8')
-
-        # 맑은 고딕(id=1) 으로 모든 한글 폰트 고정
-        import re as _re
-        header_xml = _re.sub(r'hangul="(\d+)"', 'hangul="1"', header_xml)
-        header_xml = _re.sub(r'hanja="(\d+)"', 'hanja="1"', header_xml)
-        header_xml = _re.sub(r'japanese="(\d+)"', 'japanese="1"', header_xml)
-        header_xml = _re.sub(r' user="(\d+)"', ' user="1"', header_xml)
 
         # 1. 제목 (Table 0)
         old_title = '「Beyond Minerva AI Assisted Music Production 101」 서명부'
@@ -304,8 +296,6 @@ def generate_attendee_list(data: dict) -> Path:
             for item in zin.infolist():
                 if item.filename == 'Contents/section0.xml':
                     zout.writestr(item, section_xml.encode('utf-8'))
-                elif item.filename == 'Contents/header.xml':
-                    zout.writestr(item, header_xml.encode('utf-8'))
                 else:
                     zout.writestr(item, zin.read(item.filename))
 
