@@ -11,7 +11,7 @@ Endpoints:
 import os
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, List
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -57,6 +57,7 @@ class GenerateRequest(BaseModel):
 class ParseResponse(BaseModel):
     data: dict[str, Any]
     warnings: list[str]
+    missing_warnings: List[str] = []
 
 
 class GenerateResponse(BaseModel):
@@ -78,7 +79,8 @@ async def api_parse(req: ParseRequest):
         raise HTTPException(status_code=502, detail=f"OpenAI 파싱 오류: {str(e)}")
 
     warnings = validate_receipt_timing(parsed)
-    return ParseResponse(data=parsed, warnings=warnings)
+    missing_warnings = parsed.pop("missing_warnings", []) or []
+    return ParseResponse(data=parsed, warnings=warnings, missing_warnings=missing_warnings)
 
 
 @app.post("/api/generate", response_model=GenerateResponse)

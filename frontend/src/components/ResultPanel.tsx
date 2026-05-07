@@ -24,12 +24,14 @@ interface ParsedData {
   향후계획?: string
   회의내용?: string
   참석자?: Attendee[]
+  missing_warnings?: string[]
   [key: string]: unknown
 }
 
 interface ResultPanelProps {
   parsedData: ParsedData | null
   warnings: string[]
+  missingWarnings: string[]
   generatedFiles: string[]
   onGenerate: (docType: string, receiptTypes: string[]) => void
   isGenerating: boolean
@@ -53,6 +55,7 @@ const FIELD_LABELS: { key: keyof ParsedData; label: string }[] = [
 export default function ResultPanel({
   parsedData,
   warnings,
+  missingWarnings,
   generatedFiles,
   onGenerate,
   isGenerating,
@@ -90,6 +93,32 @@ export default function ResultPanel({
                 <p key={i} className="text-red-600 text-sm leading-relaxed">{w}</p>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Missing Info Soft Warning ── */}
+      {missingWarnings && missingWarnings.length > 0 && (
+        <div className="mb-2 rounded-xl border border-yellow-200 bg-yellow-50 p-5 shadow-sm">
+          <div className="flex items-center mb-3">
+            <span className="text-2xl mr-2">💡</span>
+            <h3 className="text-base font-bold text-yellow-800">
+              AI 보완 권장사항 <span className="font-normal text-yellow-600 text-sm">(선택)</span>
+            </h3>
+          </div>
+          <ul className="list-disc pl-8 text-sm text-yellow-700 space-y-1.5 mb-3 font-medium">
+            {missingWarnings.map((warning, idx) => (
+              <li key={idx}>{warning}</li>
+            ))}
+          </ul>
+          <div className="mt-3 pt-3 border-t border-yellow-200/60">
+            <p className="text-xs text-yellow-600 font-semibold flex items-center">
+              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              위 내용은 참고용입니다. 보완하지 않고 바로 아래 [문서 생성] 버튼을 눌러도 됩니다.
+            </p>
           </div>
         </div>
       )}

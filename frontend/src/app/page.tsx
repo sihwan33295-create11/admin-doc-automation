@@ -49,6 +49,7 @@ export default function HomePage() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [parsedData, setParsedData] = useState<ParsedData | null>(null)
   const [warnings, setWarnings] = useState<string[]>([])
+  const [missingWarnings, setMissingWarnings] = useState<string[]>([])
   const [generatedFiles, setGeneratedFiles] = useState<string[]>([])
   const [parseError, setParseError] = useState('')
 
@@ -58,6 +59,7 @@ export default function HomePage() {
     setParseError('')
     setParsedData(null)
     setWarnings([])
+    setMissingWarnings([])
     setGeneratedFiles([])
 
     try {
@@ -73,6 +75,7 @@ export default function HomePage() {
       }
       setParsedData(json.data)
       setWarnings(json.warnings || [])
+      setMissingWarnings(json.missing_warnings || [])
     } catch {
       setParseError('서버에 연결할 수 없습니다. 백엔드 서버가 실행 중인지 확인하세요.')
     } finally {
@@ -110,6 +113,7 @@ export default function HomePage() {
     setInputText(EXAMPLE_TEXT)
     setParsedData(null)
     setWarnings([])
+    setMissingWarnings([])
     setGeneratedFiles([])
     setParseError('')
   }
@@ -268,6 +272,7 @@ export default function HomePage() {
               <ResultPanel
                 parsedData={parsedData}
                 warnings={warnings}
+                missingWarnings={missingWarnings}
                 generatedFiles={generatedFiles}
                 onGenerate={handleGenerate}
                 isGenerating={isGenerating}
