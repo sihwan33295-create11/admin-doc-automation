@@ -181,7 +181,7 @@ export default function HomePage() {
               <textarea
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                placeholder={`회의 일시, 장소, 참석자, 회의 내용, 식비·다과비 결제 정보 등을 자유롭게 입력하세요.\n\n예) 2026년 2월 6일 오후 1시 미디어랩스관에서 AI 음악 프로그램 회의 진행.\n참석자: 류호석 강사, 류선주 부센터장 ...\n식비 223,500원 오후 2시 결제, 다과비 50,000원 낮 12시 구매`}
+                placeholder={`회의 일시, 장소, 참석자, 회의 내용, 식비·다과비 결제 정보 등을 자유롭게 입력하세요.\n\n예) 2026년 2월 6일 오후 1시 학생회관에서 멘토링 프로그램 운영 회의 진행.\n참석자: 김철수 팀장, 이영희 교수, 홍길동 학생 ...\n식비 223,500원 오후 2시 결제, 다과비 50,000원 낮 12시 구매`}
                 rows={14}
                 className="w-full rounded-2xl border border-cb-hairline bg-cb-canvas px-4 py-3
                            text-sm text-cb-ink placeholder-cb-muted-soft
