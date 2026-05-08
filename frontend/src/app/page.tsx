@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import ResultPanel from '@/components/ResultPanel'
 
 interface ParsedData {
@@ -19,6 +19,11 @@ interface ParsedData {
   회의내용?: string
   참석자?: { 소속: string; 직위: string; 학번: string; 이름: string }[]
   [key: string]: unknown
+}
+
+interface UserInfo {
+  emp_id: string
+  emp_name: string
 }
 
 const EXAMPLE_TEXT = `프로그램명: 2026학년도 글로벌 진로개발 특강 운영 회의
@@ -43,6 +48,8 @@ const EXAMPLE_TEXT = `프로그램명: 2026학년도 글로벌 진로개발 특�
 식비: 156,000원 / 결제일시: 2026년 3월 12일 16시 20분 (회의 후 식당 결제)
 다과비: 35,000원 / 결제일시: 2026년 3월 12일 13시 45분 (회의 전 다과 구매)`
 
+const STORAGE_KEY = 'admin_doc_user'
+
 export default function HomePage() {
   const [inputText, setInputText] = useState('')
   const [isParsing, setIsParsing] = useState(false)
@@ -52,6 +59,47 @@ export default function HomePage() {
   const [missingWarnings, setMissingWarnings] = useState<string[]>([])
   const [generatedFiles, setGeneratedFiles] = useState<string[]>([])
   const [parseError, setParseError] = useState('')
+
+  // 사용자 식별 상태
+  const [user, setUser] = useState<UserInfo | null>(null)
+  const [showLoginModal, setShowLoginModal] = useState(false)
+  const [loginId, setLoginId] = useState('')
+  const [loginName, setLoginName] = useState('')
+  const [loginError, setLoginError] = useState('')
+
+  // 마운트 시 로컬스토리지에서 사용자 정보 확인
+  useEffect(() => {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (stored) {
+      try {
+        setUser(JSON.parse(stored))
+      } catch {
+        setShowLoginModal(true)
+      }
+    } else {
+      setShowLoginModal(true)
+    }
+  }, [])
+
+  const handleLogin = () => {
+    if (!loginId.trim() || !loginName.trim()) {
+      setLoginError('사번과 이름을 모두 입력해 주세요.')
+      return
+    }
+    const info: UserInfo = { emp_id: loginId.trim(), emp_name: loginName.trim() }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(info))
+    setUser(info)
+    setShowLoginModal(false)
+    setLoginError('')
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem(STORAGE_KEY)
+    setUser(null)
+    setLoginId('')
+    setLoginName('')
+    setShowLoginModal(true)
+  }
 
   const handleParse = async () => {
     if (!inputText.trim()) return
@@ -66,7 +114,11 @@ export default function HomePage() {
       const res = await fetch('/api/parse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: inputText }),
+        body: JSON.stringify({
+          text: inputText,
+          emp_id: user?.emp_id ?? '',
+          emp_name: user?.emp_name ?? '',
+        }),
       })
       const json = await res.json()
       if (!res.ok) {
@@ -121,6 +173,61 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-cb-canvas font-sans">
 
+      {/* ── 로그인 모달 ── */}
+      {showLoginModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-sm mx-4">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-9 h-9 rounded-lg bg-cb-blue flex items-center justify-center shrink-0">
+                <span className="text-white font-bold text-sm">A</span>
+              </div>
+              <div>
+                <p className="font-semibold text-cb-ink text-sm">Admin Doc AI</p>
+                <p className="text-xs text-cb-muted">사번과 이름을 입력해 주세요</p>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3 mb-4">
+              <div>
+                <label className="block text-xs font-semibold text-cb-ink mb-1">사번</label>
+                <input
+                  type="text"
+                  value={loginId}
+                  onChange={(e) => setLoginId(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                  placeholder="예) 20240012"
+                  className="w-full rounded-xl border border-cb-hairline px-3 py-2.5 text-sm text-cb-ink
+                             focus:outline-none focus:ring-2 focus:ring-cb-blue/20 focus:border-cb-blue transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-cb-ink mb-1">이름</label>
+                <input
+                  type="text"
+                  value={loginName}
+                  onChange={(e) => setLoginName(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                  placeholder="예) 홍길동"
+                  className="w-full rounded-xl border border-cb-hairline px-3 py-2.5 text-sm text-cb-ink
+                             focus:outline-none focus:ring-2 focus:ring-cb-blue/20 focus:border-cb-blue transition-colors"
+                />
+              </div>
+            </div>
+
+            {loginError && (
+              <p className="text-xs text-red-500 mb-3">{loginError}</p>
+            )}
+
+            <button
+              onClick={handleLogin}
+              className="w-full py-3 rounded-pill bg-cb-blue hover:bg-cb-blue-active text-white font-semibold text-sm transition-all shadow-sm"
+            >
+              시작하기
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── Header ── */}
       <header className="border-b border-cb-hairline bg-cb-canvas sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -131,9 +238,23 @@ export default function HomePage() {
             <span className="font-semibold text-cb-ink text-sm">Admin Doc AI</span>
             <span className="text-xs text-cb-muted hidden sm:inline">행정 문서 자동화</span>
           </div>
-          <div className="flex items-center gap-2 text-xs text-cb-muted">
+          <div className="flex items-center gap-3 text-xs text-cb-muted">
             <span className="w-2 h-2 rounded-full bg-green-400 inline-block" />
             <span>AI 연결됨</span>
+            {user && (
+              <>
+                <span className="text-cb-hairline">|</span>
+                <span className="text-cb-ink font-medium">
+                  {user.emp_name}({user.emp_id})님
+                </span>
+                <button
+                  onClick={handleLogout}
+                  className="text-cb-muted hover:text-red-500 transition-colors underline underline-offset-2"
+                >
+                  로그아웃
+                </button>
+              </>
+            )}
           </div>
         </div>
       </header>

@@ -10,8 +10,9 @@ Endpoints:
 
 import os
 import json
+from datetime import datetime
 from pathlib import Path
-from typing import Any, List
+from typing import Any, List, Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -46,6 +47,8 @@ app.add_middleware(
 
 class ParseRequest(BaseModel):
     text: str
+    emp_id: Optional[str] = None
+    emp_name: Optional[str] = None
 
 
 class GenerateRequest(BaseModel):
@@ -71,10 +74,29 @@ class GenerateResponse(BaseModel):
 # Endpoints
 # ──────────────────────────────────────────────────────────
 
+LOG_FILE = Path(__file__).parent / "user_logs.txt"
+
+def _write_log(emp_id: str, emp_name: str, text: str) -> None:
+    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    snippet = text.replace("\n", " ").replace("\r", " ").strip()
+    if len(snippet) > 50:
+        snippet = snippet[:50] + "..."
+    user_label = f"{emp_name}({emp_id})" if emp_name or emp_id else "미식별"
+    line = f"[{ts}] 사용자: {user_label} | 입력 메모: {snippet}\n"
+    try:
+        with open(LOG_FILE, "a", encoding="utf-8") as f:
+            f.write(line)
+    except Exception:
+        pass
+
+
 @app.post("/api/parse", response_model=ParseResponse)
 async def api_parse(req: ParseRequest):
     if not req.text.strip():
         raise HTTPException(status_code=400, detail="입력 텍스트가 비어 있습니다.")
+
+    _write_log(req.emp_id or "", req.emp_name or "", req.text)
+
     try:
         parsed = await parse_meeting_notes(req.text)
     except Exception as e:
