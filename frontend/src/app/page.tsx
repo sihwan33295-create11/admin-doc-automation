@@ -255,7 +255,7 @@ export default function HomePage() {
                   <span className="text-2xl">📋</span>
                 </div>
                 <p className="text-sm font-medium text-cb-ink mb-1">파싱 결과가 여기에 표시됩니다</p>
-                <p className="text-xs text-cb-muted">좌측에 내용을 입력하고 AI로 파싱하기를 누르세요</p>
+                <p className="text-xs text-cb-muted">좌측에 내용을 입력하고 [AI 분석하기] 버튼을 누르세요</p>
               </div>
             )}
 
