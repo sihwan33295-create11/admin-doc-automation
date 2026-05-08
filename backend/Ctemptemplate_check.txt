@@ -1,9 +1,0 @@
-Total: 8
-[0] pos=6752 len=79 text=「Beyond Minerva 초격차 교육」 <hp:lineBreak/> AI Assisted Music Production 101 영수증 증빙
-[1] pos=9573 len=5 text=일   시
-[2] pos=10378 len=21 text=2026년 02월 06일 11시 55분
-[3] pos=11215 len=5 text=금   액
-[4] pos=12020 len=7 text=223,500
-[5] pos=12843 len=4 text=집행내역
-[6] pos=13647 len=53 text=AI Assisted Music Production 101 프로그램 운영 및 교육회의 진행_식대
-[7] pos=14517 len=8 text=“영수증 첨부”

@@ -14,7 +14,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, List, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -138,12 +138,13 @@ async def api_generate(req: GenerateRequest):
 
 
 @app.get("/api/download/{filename}")
-async def api_download(filename: str):
+async def api_download(filename: str, background_tasks: BackgroundTasks):
     target = (OUTPUTS / filename).resolve()
     if not str(target).startswith(str(OUTPUTS.resolve())):
         raise HTTPException(status_code=403, detail="접근이 거부되었습니다.")
     if not target.exists():
         raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다.")
+    background_tasks.add_task(os.remove, str(target))
     return FileResponse(
         path=str(target),
         filename=filename,
