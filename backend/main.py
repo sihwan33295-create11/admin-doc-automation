@@ -158,6 +158,18 @@ async def api_files():
     return {"files": [f.name for f in files[:20]]}
 
 
+@app.get("/api/logs")
+async def api_logs(secret: str = ""):
+    admin_secret = os.environ.get("LOG_SECRET", "")
+    if not admin_secret or secret != admin_secret:
+        raise HTTPException(status_code=403, detail="접근이 거부되었습니다.")
+    if not LOG_FILE.exists():
+        return {"logs": [], "total": 0}
+    lines = LOG_FILE.read_text(encoding="utf-8").splitlines()
+    lines = [l for l in lines if l.strip()]
+    return {"logs": list(reversed(lines)), "total": len(lines)}
+
+
 @app.get("/api/health")
 async def health():
     return {"status": "ok", "openai_key_set": bool(os.environ.get("OPENAI_API_KEY"))}
