@@ -259,23 +259,23 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* ── Hero Band (dark) ── */}
-      <section className="bg-cb-surface-dark text-cb-on-dark py-16 px-6">
+      {/* ── Hero Band (white) ── */}
+      <section className="bg-white text-cb-ink py-16 px-6 border-b border-cb-hairline">
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-wrap gap-2 mb-6">
             {['회의록', '결과보고서', '서명부', '영수증 증빙'].map((label) => (
               <span
                 key={label}
-                className="text-xs font-medium px-3 py-1 rounded-pill border border-cb-on-dark-soft text-cb-on-dark-soft"
+                className="text-xs font-medium px-3 py-1 rounded-pill border border-cb-hairline text-cb-muted"
               >
                 {label}
               </span>
             ))}
           </div>
-          <h1 className="text-4xl font-normal text-cb-on-dark leading-tight mb-4">
+          <h1 className="text-4xl font-normal text-cb-ink leading-tight mb-4">
             행정 문서 자동 생성
           </h1>
-          <p className="text-cb-on-dark-soft text-base leading-relaxed max-w-xl">
+          <p className="text-cb-body text-base leading-relaxed max-w-xl">
             회의 내용을 자유롭게 입력하면 AI가 분석하여<br/>
             회의록 · 결과보고서 · 서명부 · 영수증 증빙을<br/>
             자동으로 HWPX 파일로 만들어 드립니다.
