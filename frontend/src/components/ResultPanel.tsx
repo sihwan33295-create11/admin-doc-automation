@@ -300,7 +300,7 @@ export default function ResultPanel({
             </button>
             <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600">
               <p className="font-semibold flex items-center mb-1 text-gray-700">
-                <span className="mr-1">ℹ️</span> 다운로드한 한글 파일이 제대로 열리지 않나요?
+                <span className="mr-1">⚠️</span> 다운로드한 한글 파일이 제대로 열리지 않나요?
               </p>
               <p className="text-xs leading-relaxed text-gray-500 pl-5">
                 한글 프로그램의 보안 설정 문제일 수 있습니다.<br/>
