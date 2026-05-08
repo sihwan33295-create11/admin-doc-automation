@@ -23,6 +23,8 @@ interface ParsedData {
   성과?: string
   향후계획?: string
   회의내용?: string
+  background?: string[]
+  future_plan?: string[]
   참석자?: Attendee[]
   missing_warnings?: string[]
   [key: string]: unknown
@@ -108,7 +110,7 @@ export default function ResultPanel({
           </div>
           <ul className="list-disc pl-8 text-sm text-yellow-700 space-y-1.5 mb-3 font-medium">
             {missingWarnings.map((warning, idx) => (
-              <li key={idx}>{warning}</li>
+              <li key={idx} dangerouslySetInnerHTML={{ __html: warning }} />
             ))}
           </ul>
           <div className="mt-3 pt-3 border-t border-yellow-200/60">
@@ -155,6 +157,17 @@ export default function ResultPanel({
               </div>
             )}
 
+            {parsedData?.background && parsedData.background.length > 0 && (
+              <div className="flex gap-3 text-sm">
+                <span className="w-32 shrink-0 text-cb-muted font-medium">추진 배경</span>
+                <div className="text-cb-ink flex-1 leading-relaxed flex flex-col gap-0.5">
+                  {parsedData.background.map((item, i) => (
+                    <span key={i}>⦁ {item}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {meetingContent && (
               <div className="flex gap-3 text-sm">
                 <span className="w-32 shrink-0 text-cb-muted font-medium">회의내용</span>
@@ -162,6 +175,17 @@ export default function ResultPanel({
                   {meetingContent.slice(0, 400)}
                   {meetingContent.length > 400 ? '…' : ''}
                 </pre>
+              </div>
+            )}
+
+            {parsedData?.future_plan && parsedData.future_plan.length > 0 && (
+              <div className="flex gap-3 text-sm">
+                <span className="w-32 shrink-0 text-cb-muted font-medium">향후 계획</span>
+                <div className="text-cb-ink flex-1 leading-relaxed flex flex-col gap-0.5">
+                  {parsedData.future_plan.map((item, i) => (
+                    <span key={i}>⦁ {item}</span>
+                  ))}
+                </div>
               </div>
             )}
           </div>

@@ -58,6 +58,8 @@ class ParseResponse(BaseModel):
     data: dict[str, Any]
     warnings: list[str]
     missing_warnings: List[str] = []
+    background: List[str] = []
+    future_plan: List[str] = []
 
 
 class GenerateResponse(BaseModel):
@@ -80,7 +82,15 @@ async def api_parse(req: ParseRequest):
 
     warnings = validate_receipt_timing(parsed)
     missing_warnings = parsed.pop("missing_warnings", []) or []
-    return ParseResponse(data=parsed, warnings=warnings, missing_warnings=missing_warnings)
+    background = parsed.get("background", []) or []
+    future_plan = parsed.get("future_plan", []) or []
+    return ParseResponse(
+        data=parsed,
+        warnings=warnings,
+        missing_warnings=missing_warnings,
+        background=background,
+        future_plan=future_plan,
+    )
 
 
 @app.post("/api/generate", response_model=GenerateResponse)

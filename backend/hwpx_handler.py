@@ -129,8 +129,8 @@ def generate_minutes(data: dict) -> Path:
             val = s(att_list[att_idx].get(field)) if att_idx < len(att_list) else ''
             section_xml = _replace_cell_text(section_xml, col, row, val)
 
-        # 3. 회의내용 — subList 전체 교체 (템플릿 굵은 텍스트 잔존 방지)
-        content_lines = [ln for ln in (data.get("회의내용") or "").split(chr(10)) if ln.strip()]
+        # 3. 회의내용 — background + 회의내용 + future_plan 통합
+        content_lines = _build_content_lines(data)
         if content_lines:
             section_xml = _replace_cell_sublist_by_label(
                 section_xml, '회의내용', content_lines,
@@ -308,6 +308,35 @@ def generate_attendee_list(data: dict) -> Path:
 # 4. 행사 결과보고서
 # --------------------------------------------------
 
+def _build_content_lines(data: dict) -> list[str]:
+    """background + 회의내용 + future_plan을 합쳐 개조식 줄 리스트로 반환"""
+    lines: list[str] = []
+
+    background: list = data.get("background") or []
+    if background:
+        lines.append("▮ 추진 배경 및 목적")
+        for item in background:
+            item = item.strip()
+            if item:
+                lines.append(f"⦁ {item}")
+
+    core = (data.get("회의내용") or "").strip()
+    if core:
+        for ln in core.split("\n"):
+            if ln.strip():
+                lines.append(ln.strip())
+
+    future: list = data.get("future_plan") or []
+    if future:
+        lines.append("▮ 향후 추진 계획")
+        for item in future:
+            item = item.strip()
+            if item:
+                lines.append(f"⦁ {item}")
+
+    return lines
+
+
 def _replace_cell_sublist_by_label(xml: str, label: str, lines: list,
                                     para_pr: str = "24", char_pr: str = "14",
                                     horzsize: int = 37507) -> str:
@@ -402,12 +431,10 @@ def generate_report(data: dict) -> Path:
             if 목적_lines:
                 xml = _replace_cell_sublist_by_label(xml, '목적 및 필요성', 목적_lines)
 
-        # 주요 추진내용 → 회의내용
-        회의내용 = s(data.get("회의내용"))
-        if 회의내용:
-            내용_lines = [ln.strip() for ln in 회의내용.split('\n') if ln.strip()]
-            if 내용_lines:
-                xml = _replace_cell_sublist_by_label(xml, '주요 추진내용', 내용_lines)
+        # 주요 추진내용 → background + 회의내용 + future_plan 통합
+        내용_lines = _build_content_lines(data)
+        if 내용_lines:
+            xml = _replace_cell_sublist_by_label(xml, '주요 추진내용', 내용_lines)
 
         # 운영성과 → 성과
         성과 = s(data.get("성과"))
