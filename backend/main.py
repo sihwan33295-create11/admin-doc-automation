@@ -11,6 +11,7 @@ Endpoints:
 import os
 import json
 import urllib.request
+import requests as _requests
 from datetime import datetime
 from pathlib import Path
 from typing import Any, List, Optional
@@ -96,32 +97,18 @@ def _write_log(emp_id: str, emp_name: str, text: str) -> None:
     # Google Sheets 기록
     if SHEETS_URL:
         try:
-            payload = json.dumps({
+            payload = {
                 "timestamp": ts,
                 "emp_id": emp_id or "미식별",
                 "emp_name": emp_name or "미식별",
                 "snippet": snippet,
-            }).encode("utf-8")
-
-            # Apps Script는 302 리다이렉트를 하므로 POST를 유지하며 따라가야 함
-            class _KeepPostRedirectHandler(urllib.request.HTTPRedirectHandler):
-                def redirect_request(self, req, fp, code, msg, headers, newurl):
-                    new_req = urllib.request.Request(
-                        newurl,
-                        data=req.data,
-                        headers={"Content-Type": "application/json"},
-                        method="POST",
-                    )
-                    return new_req
-
-            opener = urllib.request.build_opener(_KeepPostRedirectHandler)
-            req = urllib.request.Request(
-                SHEETS_URL,
-                data=payload,
-                headers={"Content-Type": "application/json"},
-                method="POST",
-            )
-            opener.open(req, timeout=10)
+            }
+            # 1단계: 리다이렉트 URL 획득 (follow_redirects=False)
+            resp = _requests.post(SHEETS_URL, json=payload, allow_redirects=False, timeout=5)
+            if resp.status_code in (301, 302, 307, 308):
+                redirect_url = resp.headers.get("Location", "")
+                if redirect_url:
+                    _requests.post(redirect_url, json=payload, timeout=10)
         except Exception:
             pass
 
