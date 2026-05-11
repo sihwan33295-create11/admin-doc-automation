@@ -130,7 +130,7 @@ export default function ResultPanel({
         <div className="rounded-2xl border border-cb-hairline bg-white shadow-sm overflow-hidden">
           <div className="px-5 py-4 border-b border-cb-hairline">
             <p className="text-[10px] font-semibold text-cb-muted uppercase tracking-widest mb-0.5">Step 2</p>
-            <h3 className="text-sm font-bold text-cb-ink">AI 파싱 결과 미리보기</h3>
+            <h3 className="text-sm font-bold text-cb-ink">AI 분석 결과 미리보기</h3>
           </div>
           <div className="p-5 grid grid-cols-1 gap-3">
             {FIELD_LABELS.map(({ key, label }) => {
