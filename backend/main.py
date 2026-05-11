@@ -97,18 +97,13 @@ def _write_log(emp_id: str, emp_name: str, text: str) -> None:
     # Google Sheets 기록
     if SHEETS_URL:
         try:
-            payload = {
+            params = {
                 "timestamp": ts,
                 "emp_id": emp_id or "미식별",
                 "emp_name": emp_name or "미식별",
                 "snippet": snippet,
             }
-            # 1단계: 리다이렉트 URL 획득 (follow_redirects=False)
-            resp = _requests.post(SHEETS_URL, json=payload, allow_redirects=False, timeout=5)
-            if resp.status_code in (301, 302, 307, 308):
-                redirect_url = resp.headers.get("Location", "")
-                if redirect_url:
-                    _requests.post(redirect_url, json=payload, timeout=10)
+            _requests.get(SHEETS_URL, params=params, timeout=10)
         except Exception:
             pass
 
