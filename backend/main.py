@@ -85,15 +85,35 @@ def _write_log(emp_id: str, emp_name: str, text: str, result: dict = None) -> No
     ts = datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S")
     snippet = text.replace("\n", " ").replace("\r", " ").strip()
 
-    # AI 산출 내용 요약
+    # AI 산출 내용 전체
     result_summary = ""
     if result:
         parts = []
-        if result.get("회의명"): parts.append(f"프로그램명: {result['회의명']}")
-        if result.get("일시"):   parts.append(f"일시: {result['일시']}")
-        if result.get("장소"):   parts.append(f"장소: {result['장소']}")
-        if result.get("안건"):   parts.append(f"안건: {result['안건']}")
-        if result.get("성과"):   parts.append(f"성과: {result['성과']}")
+        labels = [
+            ("회의명",   "프로그램명"),
+            ("일시",     "일시"),
+            ("장소",     "장소"),
+            ("안건",     "안건"),
+            ("추진본부", "추진본부"),
+            ("실행부서", "실행부서"),
+            ("성과",     "성과"),
+            ("향후계획", "향후계획"),
+            ("식비",     "식비"),
+            ("다과비",   "다과비"),
+            ("회의내용", "회의내용"),
+        ]
+        for key, label in labels:
+            val = result.get(key)
+            if val:
+                parts.append(f"{label}: {val}")
+        # 참석자
+        attendees = result.get("참석자") or []
+        if attendees:
+            att_str = ", ".join(
+                f"{a.get('이름','')}({a.get('소속','')} / {a.get('직위','')})"
+                for a in attendees
+            )
+            parts.append(f"참석자: {att_str}")
         result_summary = " | ".join(parts)
 
     # 로컬 파일 기록
