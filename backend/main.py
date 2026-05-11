@@ -12,9 +12,11 @@ import os
 import json
 import urllib.request
 import requests as _requests
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Any, List, Optional
+
+KST = timezone(timedelta(hours=9))
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
@@ -80,7 +82,7 @@ LOG_FILE = Path(__file__).parent / "user_logs.txt"
 SHEETS_URL = os.environ.get("GOOGLE_SHEETS_URL", "")
 
 def _write_log(emp_id: str, emp_name: str, text: str) -> None:
-    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    ts = datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S")
     snippet = text.replace("\n", " ").replace("\r", " ").strip()
     if len(snippet) > 100:
         snippet = snippet[:100] + "..."
