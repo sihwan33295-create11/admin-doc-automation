@@ -81,11 +81,20 @@ class GenerateResponse(BaseModel):
 LOG_FILE = Path(__file__).parent / "user_logs.txt"
 SHEETS_URL = os.environ.get("GOOGLE_SHEETS_URL", "")
 
-def _write_log(emp_id: str, emp_name: str, text: str) -> None:
+def _write_log(emp_id: str, emp_name: str, text: str, result: dict = None) -> None:
     ts = datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S")
     snippet = text.replace("\n", " ").replace("\r", " ").strip()
-    if len(snippet) > 100:
-        snippet = snippet[:100] + "..."
+
+    # AI 산출 내용 요약
+    result_summary = ""
+    if result:
+        parts = []
+        if result.get("회의명"): parts.append(f"프로그램명: {result['회의명']}")
+        if result.get("일시"):   parts.append(f"일시: {result['일시']}")
+        if result.get("장소"):   parts.append(f"장소: {result['장소']}")
+        if result.get("안건"):   parts.append(f"안건: {result['안건']}")
+        if result.get("성과"):   parts.append(f"성과: {result['성과']}")
+        result_summary = " | ".join(parts)
 
     # 로컬 파일 기록
     try:
@@ -104,6 +113,7 @@ def _write_log(emp_id: str, emp_name: str, text: str) -> None:
                 "emp_id": emp_id or "미식별",
                 "emp_name": emp_name or "미식별",
                 "snippet": snippet,
+                "result": result_summary,
             }
             _requests.get(SHEETS_URL, params=params, timeout=10)
         except Exception:
@@ -115,12 +125,12 @@ async def api_parse(req: ParseRequest):
     if not req.text.strip():
         raise HTTPException(status_code=400, detail="입력 텍스트가 비어 있습니다.")
 
-    _write_log(req.emp_id or "", req.emp_name or "", req.text)
-
     try:
         parsed = await parse_meeting_notes(req.text)
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"OpenAI 파싱 오류: {str(e)}")
+
+    _write_log(req.emp_id or "", req.emp_name or "", req.text, result=parsed)
 
     warnings = validate_receipt_timing(parsed)
     missing_warnings = parsed.pop("missing_warnings", []) or []
