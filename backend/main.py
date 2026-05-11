@@ -10,6 +10,7 @@ Endpoints:
 
 import os
 import json
+import urllib.request
 from datetime import datetime
 from pathlib import Path
 from typing import Any, List, Optional
@@ -75,19 +76,41 @@ class GenerateResponse(BaseModel):
 # ──────────────────────────────────────────────────────────
 
 LOG_FILE = Path(__file__).parent / "user_logs.txt"
+SHEETS_URL = os.environ.get("GOOGLE_SHEETS_URL", "")
 
 def _write_log(emp_id: str, emp_name: str, text: str) -> None:
     ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     snippet = text.replace("\n", " ").replace("\r", " ").strip()
-    if len(snippet) > 50:
-        snippet = snippet[:50] + "..."
-    user_label = f"{emp_name}({emp_id})" if emp_name or emp_id else "미식별"
-    line = f"[{ts}] 사용자: {user_label} | 입력 메모: {snippet}\n"
+    if len(snippet) > 100:
+        snippet = snippet[:100] + "..."
+
+    # 로컬 파일 기록
     try:
+        user_label = f"{emp_name}({emp_id})" if emp_name or emp_id else "미식별"
+        line = f"[{ts}] 사용자: {user_label} | 입력 메모: {snippet}\n"
         with open(LOG_FILE, "a", encoding="utf-8") as f:
             f.write(line)
     except Exception:
         pass
+
+    # Google Sheets 기록
+    if SHEETS_URL:
+        try:
+            payload = json.dumps({
+                "timestamp": ts,
+                "emp_id": emp_id or "미식별",
+                "emp_name": emp_name or "미식별",
+                "snippet": snippet,
+            }).encode("utf-8")
+            req = urllib.request.Request(
+                SHEETS_URL,
+                data=payload,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            urllib.request.urlopen(req, timeout=5)
+        except Exception:
+            pass
 
 
 @app.post("/api/parse", response_model=ParseResponse)
