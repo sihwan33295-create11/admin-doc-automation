@@ -102,13 +102,26 @@ def _write_log(emp_id: str, emp_name: str, text: str) -> None:
                 "emp_name": emp_name or "미식별",
                 "snippet": snippet,
             }).encode("utf-8")
+
+            # Apps Script는 302 리다이렉트를 하므로 POST를 유지하며 따라가야 함
+            class _KeepPostRedirectHandler(urllib.request.HTTPRedirectHandler):
+                def redirect_request(self, req, fp, code, msg, headers, newurl):
+                    new_req = urllib.request.Request(
+                        newurl,
+                        data=req.data,
+                        headers={"Content-Type": "application/json"},
+                        method="POST",
+                    )
+                    return new_req
+
+            opener = urllib.request.build_opener(_KeepPostRedirectHandler)
             req = urllib.request.Request(
                 SHEETS_URL,
                 data=payload,
                 headers={"Content-Type": "application/json"},
                 method="POST",
             )
-            urllib.request.urlopen(req, timeout=5)
+            opener.open(req, timeout=10)
         except Exception:
             pass
 
