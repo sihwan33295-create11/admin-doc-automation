@@ -234,30 +234,59 @@ def generate_receipt(data: dict, receipt_type: str = "식비") -> Path:
 # 3. 참석자 명단 (template-based ZIP replacement)
 # --------------------------------------------------
 
+def _clone_attendee_row(template_row_xml: str, new_row: int, att: dict, s) -> str:
+    """row 25 XML을 복제해서 new_row 번호의 새 행으로 변환."""
+    xml = template_row_xml
+    # rowAddr 교체
+    xml = xml.replace(f'rowAddr="25"', f'rowAddr="{new_row}"')
+    # 연번 텍스트 교체 (col 0: <hp:t>25</hp:t>)
+    xml = xml.replace(f'<hp:t>25</hp:t>', f'<hp:t>{new_row}</hp:t>', 1)
+    # 각 컬럼 내용 채우기 (col 1~4)
+    fields = [
+        ('소속', 1),
+        ('직위', 2),
+        ('학번', 3),
+        ('이름', 4),
+    ]
+    # col별로 <hp:t> 내용 교체 (순서대로 등장하는 빈 <hp:t/> 또는 <hp:t>값</hp:t>)
+    for field, col in fields:
+        val = _esc_xml(s(att.get(field) or ('-' if field == '학번' else '')))
+        # cellAddr colAddr="{col}" rowAddr="{new_row}" 찾아서 해당 tc 안의 hp:t 교체
+        marker = f'colAddr="{col}" rowAddr="{new_row}"'
+        pos = xml.find(marker)
+        if pos == -1:
+            continue
+        tc_start = xml.rfind('<hp:tc ', 0, pos)
+        tc_end   = xml.find('</hp:tc>', pos) + len('</hp:tc>')
+        cell = xml[tc_start:tc_end]
+        cell = re.sub(r'<hp:t>[^<]*</hp:t>|<hp:t/>', f'<hp:t>{val}</hp:t>', cell, count=1)
+        xml = xml[:tc_start] + cell + xml[tc_end:]
+    return xml
+
+
 def generate_attendee_list(data: dict) -> Path:
     """
     data keys: 회의명, 일시, 장소, 참석자(list of {소속,직위,학번,이름})
 
-    Uses 참석자명단_template.hwpx as the base.
-    Replaces only: title, 일시 value, 장소 value, and attendee row cells (rows 1-25).
-    Rows beyond the attendee count are cleared to empty.
+    참석자 수에 관계없이 행을 동적으로 생성합니다 (25명 초과 시 자동 확장).
     """
     dst = OUTPUTS / f"서명부_{_ts()}.hwpx"
     shutil.copy(ATTENDEE_HWPX, dst)
 
     def s(v): return str(v) if v is not None else ""
     attendees = data.get("참석자") or []
+    total = len(attendees)
     tmp = str(dst) + ".tmp"
 
     with zipfile.ZipFile(str(dst), 'r') as zin:
         section_xml = zin.read('Contents/section0.xml').decode('utf-8')
 
-        # 1. 제목 (Table 0)
+        # 1. 제목
         old_title = '「Beyond Minerva AI Assisted Music Production 101」 서명부'
         new_title = f'「{s(data.get("회의명"))}」 서명부'
         section_xml = section_xml.replace(old_title, _esc_xml(new_title))
 
-        # 2. 일시 / 장소 (Table 1)
+        # 2. 일시 / 장소
         section_xml = section_xml.replace(
             '2026. 2. 6.(목) 13:00 ~ 16:00',
             _esc_xml(s(data.get("일시")))
@@ -267,14 +296,17 @@ def generate_attendee_list(data: dict) -> Path:
             _esc_xml(s(data.get("장소")))
         )
 
-        # 3. Table 2 시작 위치
+        # 3. 참석자 표 (3번째 tbl) 위치 파악
         tbl_positions = [m.start() for m in re.finditer(r'<hp:tbl ', section_xml)]
-        table2_start = tbl_positions[2] if len(tbl_positions) >= 3 else 0
+        tbl3_start = tbl_positions[2] if len(tbl_positions) >= 3 else 0
+        tbl3_end   = section_xml.find('</hp:tbl>', tbl3_start) + len('</hp:tbl>')
+        tbl3_xml   = section_xml[tbl3_start:tbl3_end]
 
-        # 4. 참석자 rows 1-25 (col: 0=No, 1=소속, 2=직위, 3=학번, 4=이름)
+        # 4. 기존 25행 채우기 (역순)
+        table2_start = tbl3_start
         for row_idx in range(25, 0, -1):
             att_idx = row_idx - 1
-            if att_idx < len(attendees):
+            if att_idx < total:
                 att = attendees[att_idx]
                 vals = {
                     0: str(row_idx),
@@ -285,13 +317,43 @@ def generate_attendee_list(data: dict) -> Path:
                 }
             else:
                 vals = {0: '', 1: '', 2: '', 3: '', 4: ''}
-
             for col in (4, 3, 2, 1, 0):
                 section_xml = _replace_cell_text(
                     section_xml, col, row_idx, vals[col], table2_start
                 )
 
-        # Write modified section back into the ZIP
+        # 5. 26행 이상: 마지막 행(row 25) XML 복제해서 추가
+        if total > 25:
+            # 최신 section_xml 기준으로 tbl3 다시 파악
+            tbl_positions2 = [m.start() for m in re.finditer(r'<hp:tbl ', section_xml)]
+            tbl3_s2 = tbl_positions2[2]
+            tbl3_e2 = section_xml.find('</hp:tbl>', tbl3_s2)
+            tbl3_xml2 = section_xml[tbl3_s2:tbl3_e2]
+
+            # row 25 tr 추출
+            tr_positions = [m.start() for m in re.finditer(r'<hp:tr>', tbl3_xml2)]
+            close_positions = [m.start() for m in re.finditer(r'</hp:tr>', tbl3_xml2)]
+            last_tr_start = tr_positions[-1]
+            last_tr_end   = close_positions[-1] + len('</hp:tr>')
+            row25_template = tbl3_xml2[last_tr_start:last_tr_end]
+
+            # 추가 행 생성
+            extra_rows_xml = ''
+            for row_idx in range(26, total + 1):
+                att = attendees[row_idx - 1]
+                extra_rows_xml += _clone_attendee_row(row25_template, row_idx, att, s)
+
+            # </hp:tbl> 직전에 삽입
+            insert_pos = section_xml.find('</hp:tbl>', tbl3_s2)
+            section_xml = section_xml[:insert_pos] + extra_rows_xml + section_xml[insert_pos:]
+
+            # rowCnt 업데이트
+            new_row_cnt = total + 1  # header(1) + data rows
+            section_xml = section_xml.replace(
+                f'rowCnt="26"', f'rowCnt="{new_row_cnt}"', 1
+            )
+
+        # Write back
         with zipfile.ZipFile(tmp, 'w', zipfile.ZIP_DEFLATED) as zout:
             for item in zin.infolist():
                 if item.filename == 'Contents/section0.xml':
