@@ -418,8 +418,8 @@ def _replace_cell_sublist_by_label(xml: str, label: str, lines: list,
         f'pageBreak="0" columnBreak="0" merged="0">'
         f'<hp:run charPrIDRef="{char_pr}"><hp:t>{_esc_xml(line)}</hp:t></hp:run>'
         f'<hp:linesegarray><hp:lineseg textpos="0" vertpos="{i * 1600}" '
-        f'vertsize="1000" textheight="1000" baseline="850" spacing="600" '
-        f'horzpos="133" horzsize="{horzsize}" flags="393216"/>'
+        f'vertsize="1600" textheight="1400" baseline="1190" spacing="600" '
+        f'horzpos="0" horzsize="99000" flags="393216"/>'
         f'</hp:linesegarray></hp:p>'
         for i, line in enumerate(lines)
     )
