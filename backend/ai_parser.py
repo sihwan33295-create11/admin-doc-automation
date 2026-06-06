@@ -5,6 +5,7 @@ into structured JSON for HWPX document generation.
 
 import json
 import os
+import re
 from datetime import datetime
 from typing import Any
 
@@ -106,7 +107,9 @@ SYSTEM_PROMPT = (
 
 ### 형식:
 - 개조식 행정 문체: ▮ 대주제 / ⦁ 세부사항 구조
-- 동사 종결: '~함', '~완료', '~예정', '~추진'
+- ★종결 규칙(절대 준수): 모든 항목은 '명사'로 딱 끝낼 것. '~함', '~됨', '~음', '~임' 같은 어미를 절대 붙이지 말 것.
+  · 올바른 예: '안내', '진행', '추진', '공유', '확인', '완료', '검토', '협의'
+  · 잘못된 예: '안내함'(X), '진행함'(X), '공유함'(X), '확인함'(X), '완료됨'(X)
 - 불필요한 서론·결론 없이 핵심 내용만
 
 ## ★★★ 회의/행사 내용 5대항목 분류 규칙 ★★★
@@ -204,7 +207,39 @@ async def parse_meeting_notes(user_input: str) -> dict[str, Any]:
     # 참석자 직위 높은 순으로 강제 정렬 (모델 정렬 불안정 보완)
     parsed["참석자"] = _sort_attendees(parsed.get("참석자") or [])
 
+    # 개조식 종결 명사형 통일 (~함/~됨 제거)
+    for key in ("회의내용", "성과", "목적", "향후계획", "안건"):
+        if isinstance(parsed.get(key), str):
+            parsed[key] = _to_noun_ending(parsed[key])
+    for key in ("background", "future_plan"):
+        if isinstance(parsed.get(key), list):
+            parsed[key] = [_to_noun_ending(s) for s in parsed[key]]
+
     return parsed
+
+
+# 동사 어간 사전 (이 어간들 뒤의 '함/됨'만 제거 → 포함/마음/처음 등 진짜 명사는 보존)
+_VERB_STEMS = (
+    "진행|안내|공유|확인|추진|완료|검토|협의|운영|실시|개최|참여|논의|수립|도출|"
+    "마련|점검|강화|확대|증진|도모|향상|구축|발표|제공|지원|준비|조율|배정|선정|"
+    "섭외|모집|홍보|평가|분석|개선|보고|정리|결정|합의|체결|선발|배포|시행|착수|"
+    "종료|완수|확정|구성|마감|반영|공지|조성|발굴|연계|운용|관리|예정|실행|이행|"
+    "검증|승인|제출|접수|등록|발송|회수|집행|편성|배치|운임|소개|교류|참석|발언"
+)
+_NOUN_END_RE = re.compile(rf'(?<=({_VERB_STEMS}))(함|됨)(?=\s*$)')
+
+
+def _to_noun_ending(text: str) -> str:
+    """각 줄 끝의 동사형 종결('~함', '~됨')을 명사형으로 변환."""
+    if not text:
+        return text
+    out_lines = []
+    for line in text.split("\n"):
+        stripped = line.rstrip()
+        trail = line[len(stripped):]  # 끝 공백 보존
+        new = _NOUN_END_RE.sub("", stripped)
+        out_lines.append(new + trail)
+    return "\n".join(out_lines)
 
 
 def _sort_attendees(attendees: list) -> list:
