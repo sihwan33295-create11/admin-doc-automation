@@ -46,6 +46,15 @@ SYSTEM_PROMPT = (
       "이름": "string"
     }
   ],
+  // ★★★ 참석자 정렬 규칙 (절대 준수) ★★★
+  // 참석자 배열은 반드시 직위가 높은 순서대로 정렬할 것:
+  //   1순위: 총장/부총장/처장/단장/원장
+  //   2순위: 교수/부교수/조교수/강사
+  //   3순위: 팀장/실장/센터장
+  //   4순위: 직원/주무관/담당자
+  //   5순위: 학생/학부생/대학원생
+  // 같은 직위끼리는 입력된 순서를 그대로 유지할 것.
+  // (입력 메모에서 사용자가 적은 순서가 아니라, 위 직위 우선순위를 최우선으로 적용)
   "background": ["string — 추진 배경 및 목적 항목들, 해당 없으면 빈 배열"],
   "future_plan": ["string — 향후 추진 계획 항목들, 해당 없으면 빈 배열"],
   "회의내용": "string — 아래 ★규칙 엄격 적용★",
@@ -192,7 +201,35 @@ async def parse_meeting_notes(user_input: str) -> dict[str, Any]:
     if not parsed.get("목적"):
         parsed["목적"] = await _infer_purpose(client, parsed)
 
+    # 참석자 직위 높은 순으로 강제 정렬 (모델 정렬 불안정 보완)
+    parsed["참석자"] = _sort_attendees(parsed.get("참석자") or [])
+
     return parsed
+
+
+def _sort_attendees(attendees: list) -> list:
+    """참석자를 직위 우선순위로 정렬. 같은 직위는 입력 순서 유지(안정 정렬)."""
+    def rank(att: dict) -> int:
+        pos = str(att.get("직위") or "")
+        # 1순위(0): 총장/부총장/처장/단장/원장
+        if any(k in pos for k in ("총장", "처장", "단장", "원장", "학장", "부장")):
+            return 0
+        # 2순위(1): 교수/강사
+        if any(k in pos for k in ("교수", "강사", "초빙", "겸임")):
+            return 1
+        # 3순위(2): 팀장/실장/센터장
+        if any(k in pos for k in ("팀장", "실장", "센터장", "소장", "본부장")):
+            return 2
+        # 4순위(3): 직원/주무관/담당자
+        if any(k in pos for k in ("직원", "주무관", "담당", "행정")):
+            return 3
+        # 5순위(4): 학생
+        if any(k in pos for k in ("학생", "학부", "대학원", "원생")):
+            return 4
+        # 그 외는 중간(2.5 → 3에 가깝게)
+        return 3
+    # enumerate로 원래 순서를 보조키로 사용 → 같은 직위는 입력 순서 유지
+    return [a for _, a in sorted(enumerate(attendees), key=lambda x: (rank(x[1]), x[0]))]
 
 
 async def _infer_outcome(client, data: dict) -> str:
