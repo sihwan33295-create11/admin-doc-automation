@@ -177,7 +177,7 @@ async def parse_meeting_notes(user_input: str) -> dict[str, Any]:
     """
     client = _get_client()
     response = await client.chat.completions.create(
-        model="gpt-5.4-nano",
+        model="gpt-5-nano",
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_input},
@@ -283,7 +283,7 @@ async def _infer_outcome(client, data: dict) -> str:
         "- 텍스트만 출력"
     )
     resp = await client.chat.completions.create(
-        model="gpt-5.4-nano",
+        model="gpt-5-nano",
         messages=[
             {"role": "system", "content": prompt},
             {"role": "user", "content": context},
@@ -308,7 +308,7 @@ async def _infer_purpose(client, data: dict) -> str:
         "- 텍스트만 출력"
     )
     resp = await client.chat.completions.create(
-        model="gpt-5.4-nano",
+        model="gpt-5-nano",
         messages=[
             {"role": "system", "content": prompt},
             {"role": "user", "content": context},
@@ -331,7 +331,7 @@ async def _infer_content(client, data: dict) -> str:
         f"추진본부: {data.get('추진본부', '')}"
     )
     resp = await client.chat.completions.create(
-        model="gpt-5.4-nano",
+        model="gpt-5-nano",
         messages=[
             {"role": "system", "content": CONTENT_INFER_PROMPT},
             {"role": "user", "content": context},
