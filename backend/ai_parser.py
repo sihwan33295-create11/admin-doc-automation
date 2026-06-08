@@ -13,15 +13,16 @@ from openai import AsyncOpenAI
 
 
 def _get_client() -> AsyncOpenAI:
-    key = os.environ.get("OPENAI_API_KEY")
+    # Google Gemini를 OpenAI 호환 엔드포인트로 사용
+    key = os.environ.get("GEMINI_API_KEY") or os.environ.get("OPENAI_API_KEY")
     if not key:
         raise RuntimeError(
-            "OPENAI_API_KEY 환경변수가 설정되지 않았습니다. "
-            ".env 파일에 OPENAI_API_KEY=... 를 추가해 주세요."
+            "GEMINI_API_KEY 환경변수가 설정되지 않았습니다. "
+            "Render 환경변수에 GEMINI_API_KEY=... 를 추가해 주세요."
         )
     return AsyncOpenAI(
         api_key=key,
-        base_url="https://factchat-cloud.mindlogic.ai/v1/gateway",
+        base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
     )
 
 current_datetime = datetime.now().strftime("%Y년 %m월 %d일")
@@ -177,7 +178,7 @@ async def parse_meeting_notes(user_input: str) -> dict[str, Any]:
     """
     client = _get_client()
     response = await client.chat.completions.create(
-        model="gpt-5-nano",
+        model="gemini-2.0-flash",
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_input},
@@ -283,7 +284,7 @@ async def _infer_outcome(client, data: dict) -> str:
         "- 텍스트만 출력"
     )
     resp = await client.chat.completions.create(
-        model="gpt-5-nano",
+        model="gemini-2.0-flash",
         messages=[
             {"role": "system", "content": prompt},
             {"role": "user", "content": context},
@@ -308,7 +309,7 @@ async def _infer_purpose(client, data: dict) -> str:
         "- 텍스트만 출력"
     )
     resp = await client.chat.completions.create(
-        model="gpt-5-nano",
+        model="gemini-2.0-flash",
         messages=[
             {"role": "system", "content": prompt},
             {"role": "user", "content": context},
@@ -331,7 +332,7 @@ async def _infer_content(client, data: dict) -> str:
         f"추진본부: {data.get('추진본부', '')}"
     )
     resp = await client.chat.completions.create(
-        model="gpt-5-nano",
+        model="gemini-2.0-flash",
         messages=[
             {"role": "system", "content": CONTENT_INFER_PROMPT},
             {"role": "user", "content": context},
