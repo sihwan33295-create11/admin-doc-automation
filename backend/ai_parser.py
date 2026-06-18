@@ -3,6 +3,7 @@ OpenAI API integration for parsing free-text meeting notes
 into structured JSON for HWPX document generation.
 """
 
+import asyncio
 import json
 import os
 import re
@@ -10,6 +11,31 @@ from datetime import datetime
 from typing import Any
 
 from openai import AsyncOpenAI
+
+MODEL = "gemini-flash-latest"
+
+
+async def _chat(client, messages, temperature=0.2, max_retries=4):
+    """일시적 503/UNAVAILABLE/429 오류를 자동 재시도하는 래퍼."""
+    delay = 2.0
+    last_err = None
+    for attempt in range(max_retries):
+        try:
+            return await client.chat.completions.create(
+                model=MODEL,
+                messages=messages,
+                temperature=temperature,
+            )
+        except Exception as e:
+            last_err = e
+            msg = str(e)
+            # 일시적 오류만 재시도 (서버 과부하/속도 제한)
+            if any(code in msg for code in ("503", "UNAVAILABLE", "429", "overloaded", "high demand")):
+                await asyncio.sleep(delay)
+                delay *= 2  # 지수 백오프: 2s → 4s → 8s
+                continue
+            raise
+    raise last_err
 
 
 def _get_client() -> AsyncOpenAI:
@@ -177,8 +203,8 @@ async def parse_meeting_notes(user_input: str) -> dict[str, Any]:
     회의내용이 비어 있으면 별도 호출로 생성 (폴백)
     """
     client = _get_client()
-    response = await client.chat.completions.create(
-        model="gemini-flash-latest",
+    response = await _chat(
+        client,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_input},
@@ -283,8 +309,8 @@ async def _infer_outcome(client, data: dict) -> str:
         "- 구체적 수치나 효과를 포함하여 유추\n"
         "- 텍스트만 출력"
     )
-    resp = await client.chat.completions.create(
-        model="gemini-flash-latest",
+    resp = await _chat(
+        client,
         messages=[
             {"role": "system", "content": prompt},
             {"role": "user", "content": context},
@@ -308,8 +334,8 @@ async def _infer_purpose(client, data: dict) -> str:
         "- '~강화', '~증진', '~확대', '~도모' 등 명사형 종결\n"
         "- 텍스트만 출력"
     )
-    resp = await client.chat.completions.create(
-        model="gemini-flash-latest",
+    resp = await _chat(
+        client,
         messages=[
             {"role": "system", "content": prompt},
             {"role": "user", "content": context},
@@ -331,8 +357,8 @@ async def _infer_content(client, data: dict) -> str:
         f"참석자: {att_lines}\n"
         f"추진본부: {data.get('추진본부', '')}"
     )
-    resp = await client.chat.completions.create(
-        model="gemini-flash-latest",
+    resp = await _chat(
+        client,
         messages=[
             {"role": "system", "content": CONTENT_INFER_PROMPT},
             {"role": "user", "content": context},
