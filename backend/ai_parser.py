@@ -12,7 +12,7 @@ from typing import Any
 
 from openai import AsyncOpenAI
 
-MODEL = "gemini-flash-latest"
+MODEL = "gemini-2.5-flash-lite"   # 무료 한도 분당 15회 (flash 모델은 5회)
 
 
 async def _chat(client, messages, temperature=0.2, max_retries=4):
@@ -31,7 +31,12 @@ async def _chat(client, messages, temperature=0.2, max_retries=4):
             msg = str(e)
             # 일시적 오류만 재시도 (서버 과부하/속도 제한)
             if any(code in msg for code in ("503", "UNAVAILABLE", "429", "overloaded", "high demand")):
-                await asyncio.sleep(delay)
+                # 429면 응답이 알려준 retryDelay를 반영 (최대 20초로 캡)
+                wait = delay
+                m = re.search(r'retry in ([\d.]+)s', msg) or re.search(r"retryDelay'?: '?([\d.]+)s", msg)
+                if m:
+                    wait = min(float(m.group(1)) + 1, 20.0)
+                await asyncio.sleep(wait)
                 delay *= 2  # 지수 백오프: 2s → 4s → 8s
                 continue
             raise
